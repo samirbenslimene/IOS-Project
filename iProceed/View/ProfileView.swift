@@ -9,7 +9,7 @@ import Foundation
 import UIKit
 import FBSDKLoginKit
 
-class ProfileView: UIViewController {
+class ProfileView: UIViewController, ModalTransitionListener {
 
     // variables
     let token = UserDefaults.standard.string(forKey: "userToken")!
@@ -34,19 +34,35 @@ class ProfileView: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+        ModalTransitionMediator.instance.setListener(listener: self)
         initializeProfile()
     }
 
     // methods
+    func popoverDismissed() {
+        initializeProfile()
+    }
+    
     func initializeProfile() {
         print("initializing profile")
         UserViewModel().getUserFromToken(userToken: token, completed: { success, user in
             if success {
-                self.nameLabel.text = user?.name
-                self.roleLabel.text = user?.role
-                self.emailLabel.text = user?.email
-                self.phoneLabel.text = user?.phone
+                if user?.name != "" {
+                    self.nameLabel.text = user?.name
+                }
+                
+                if user?.role != "" {
+                    self.roleLabel.text = user?.role
+                }
+                
+                if user?.email != "" {
+                    self.emailLabel.text = user?.email
+                }
+                
+                if user?.phone != "" {
+                    self.phoneLabel.text = user?.phone
+                }
+                
             } else {
                 self.present(Alert.makeAlert(titre: "Error", message: "Could not verify token"), animated: true
                 )
@@ -78,9 +94,5 @@ class ProfileView: UIViewController {
                 }
             })
         }
-    }
-    
-    @IBAction func reloadProfile(_ sender: Any) {
-        initializeProfile()
     }
 }

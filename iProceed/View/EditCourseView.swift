@@ -25,7 +25,7 @@ class EditCourseView: UIViewController {
     
     // actions
     @IBAction func save(_ sender: Any) {
-        CourseViewModel().editCourse(_id: (course?._id)!, title: (course?.title)!, description: (course?.description)!, date: (course?.date)!) { success in
+        CourseViewModel().editCourse(_id: (course?._id)!, title: titreTextView.text!, description: descriptionTextView.text, date: (course?.date)!) { success in
             if success {
                 let action = UIAlertAction(title: "Proceed", style: .default) { UIAlertAction in
                     self.dismiss(animated: true, completion: nil)

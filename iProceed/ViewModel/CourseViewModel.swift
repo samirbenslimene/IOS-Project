@@ -99,11 +99,11 @@ class CourseViewModel {
     }
     
     func deleteCourse(_id: String, completed: @escaping (Bool) -> Void) {
-        AF.request(Constants.serverUrl + "/course",
-                   method: .delete,
-                   parameters: ["_id" : _id])
+        AF.request(Constants.serverUrl + "/course/delete",
+                   method: .post,
+                   parameters: ["_id" : _id],
+                   encoding: JSONEncoding.default)
             .validate(statusCode: 200..<300)
-            .validate(contentType: ["application/json"])
             .responseData { response in
                 switch response.result {
                 case .success:
