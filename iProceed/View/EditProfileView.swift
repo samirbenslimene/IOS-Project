@@ -8,8 +8,8 @@
 import Foundation
 import UIKit
 
-class EditProfileView: UIViewController {
-
+class EditProfileView: UIViewController, SecondModalTransitionListener {
+    
     // variables
     var user : User?
     
@@ -17,26 +17,64 @@ class EditProfileView: UIViewController {
     @IBOutlet weak var emailTF: UITextField!
     @IBOutlet weak var nameTF: UITextField!
     @IBOutlet weak var phoneTF: UITextField!
+    @IBOutlet weak var locationLabel: UILabel!
+    @IBOutlet weak var addLocationButton: UIButton!
+    @IBOutlet weak var changeMyLocation: UIButton!
+    @IBOutlet weak var clearMyLocationButton: UIButton!
     
     // protocols
-    
     
     // life cycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        emailTF.text = user?.email
-        nameTF.text = user?.name
-        phoneTF.text = user?.phone
+        SecondModalTransitionMediator.instance.setListener(listener: self)
+        initialize(onlyLocation: false)
+    }
+    
+    func popoverDismissed() {
+        reloadView(onlyLocation: false)
+    }
+    
+    override func viewDidDisappear(_ animated: Bool) {
+        ModalTransitionMediator.instance.sendPopoverDismissed(modelChanged: true)
+    }
+    
+    // methods
+    func initialize(onlyLocation: Bool) {
+        if (!onlyLocation){
+            emailTF.text = user?.email
+            nameTF.text = user?.name
+            phoneTF.text = user?.phone
+        }
         
         emailTF.textColor = .white
         emailTF.backgroundColor = .gray
         emailTF.isEnabled = false
         
+        if user?.longitude == "" || user?.latitude == "" {
+            locationLabel.isHidden = true
+            addLocationButton.isHidden = false
+            changeMyLocation.isHidden = true
+            clearMyLocationButton.isHidden = true
+        } else {
+            locationLabel.isHidden = false
+            addLocationButton.isHidden = true
+            changeMyLocation.isHidden = false
+            clearMyLocationButton.isHidden = false
+            
+            locationLabel.text = (user?.latitude)! + ", " + (user?.longitude)!
+        }
     }
     
-    // methods
-
+    func reloadView(onlyLocation: Bool) {
+        UserViewModel().getUserFromToken(userToken: UserDefaults.standard.string(forKey: "userToken")!) { success, user in
+            if success {
+                self.user = user
+                self.initialize(onlyLocation: true)
+            }
+        }
+    }
+    
     // actions
     @IBAction func confirmChanges(_ sender: Any) {
         
@@ -62,4 +100,13 @@ class EditProfileView: UIViewController {
         }
     }
     
+    @IBAction func clearMyLocation(_ sender: Any) {
+        UserViewModel().setLocation(email: (user?.email)!, latitude: 0, longitude: 0, clear: true) { success in
+            if success {
+                self.present(Alert.makeActionAlert(titre: "Warning", message: "Would you really like to clear location data ?", action: UIAlertAction(title: "Yes", style: .destructive, handler: { uiAction in
+                    self.reloadView(onlyLocation: true)
+                })),animated: true)
+            }
+        }
+    }
 }

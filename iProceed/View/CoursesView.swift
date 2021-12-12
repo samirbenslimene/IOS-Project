@@ -37,6 +37,23 @@ class CoursesView: UIViewController, UITableViewDataSource, UITableViewDelegate 
         self.performSegue(withIdentifier: "courseDetailSegue", sender: courseForDetails)
     }
     
+    func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+    
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if (editingStyle == UITableViewCell.EditingStyle.delete) {
+            CourseViewModel().deleteCourse(_id: courses[indexPath.row]._id!) { success in
+                if success {
+                    self.courses.remove(at: indexPath.row)
+                    tableView.reloadData()
+                }else{
+                    self.present(Alert.makeAlert(titre: "Error", message: "Could not delete"),animated: true)
+                }
+            }
+        }
+    }
+    
     // life cycle
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "courseDetailSegue" {
@@ -49,6 +66,7 @@ class CoursesView: UIViewController, UITableViewDataSource, UITableViewDelegate 
         super.viewDidLoad()
         
         loadCourses(tv: self.coursesTableView)
+        
         coursesTableView.reloadData()
     }
     
@@ -69,8 +87,8 @@ class CoursesView: UIViewController, UITableViewDataSource, UITableViewDelegate 
                     self.courses.append(course)
                 }
                 /*DispatchQueue.main.async {
-                    self.coursesTableView.reloadWithAnimation()
-                }*/
+                 self.coursesTableView.reloadWithAnimation()
+                 }*/
             }
             else{
                 self.present(Alert.makeAlert(titre: "Error", message: "Could not load courses"), animated: true)
@@ -78,6 +96,14 @@ class CoursesView: UIViewController, UITableViewDataSource, UITableViewDelegate 
         }
     }
     
+    var isEditingBool = false
     // actions
-    
+    @IBAction func editButton(_ sender: UIBarButtonItem) {
+        if isEditingBool {
+            coursesTableView.setEditing(false, animated: true)
+        } else {
+            coursesTableView.setEditing(true, animated: true)
+        }
+        isEditingBool = !isEditingBool
+    }
 }

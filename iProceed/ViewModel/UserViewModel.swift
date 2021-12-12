@@ -11,6 +11,50 @@ import UIKit.UIImage
 
 class UserViewModel {
     
+    func getAllInstructors(completed: @escaping (Bool, [User]?) -> Void) {
+        AF.request(Constants.serverUrl + "/user",
+                   method: .get)
+            .validate(statusCode: 200..<300)
+            .validate(contentType: ["application/json"])
+            .responseData { response in
+                switch response.result {
+                case .success:
+                    let jsonData = JSON(response.data!)
+                    var users : [User]? = []
+                    for singleJsonItem in jsonData["users"] {
+                        users!.append(self.makeUser(jsonItem: singleJsonItem.1))
+                    }
+                    completed(true, users)
+                case let .failure(error):
+                    print(error)
+                    completed(false, nil)
+                }
+            }
+    }
+    
+    func getUserById(_id: String?, completed: @escaping (Bool, User?) -> Void) {
+        AF.request(Constants.serverUrl + "/user/by-id",
+                   method: .post,
+                   parameters: ["_id" : _id!],
+                   encoding: JSONEncoding.default)
+            .validate(statusCode: 200..<300)
+            .validate(contentType: ["application/json"])
+            .responseData { response in
+                switch response.result {
+                case .success:
+                    let jsonData = JSON(response.data!)
+                    let user = self.makeUser(jsonItem: jsonData["user"])
+                        print("Found user --------------------")
+                        print(user)
+                        print("-------------------------------")
+                    completed(true, user)
+                case let .failure(error):
+                    debugPrint(error)
+                    completed(false, nil)
+                }
+            }
+    }
+    
     func signUp(user: User, completed: @escaping (Bool) -> Void ) {
         print(user)
         AF.request(Constants.serverUrl + "/user/signUp",
@@ -50,6 +94,7 @@ class UserViewModel {
                     let jsonData = JSON(response.data!)
                     let user = self.makeUser(jsonItem: jsonData["user"])
                     UserDefaults.standard.setValue(jsonData["token"].stringValue, forKey: "userToken")
+                    UserDefaults.standard.setValue(user._id, forKey: "userId")
                     completed(true, user)
                 case let .failure(error):
                     debugPrint(error)
@@ -82,10 +127,10 @@ class UserViewModel {
             }
     }
     
-    func loginWithSocialApp(email: String, name: String, completed: @escaping (Bool, User?) -> Void ) {
+    func loginWithSocialApp(email: String, name: String, role: String, completed: @escaping (Bool, User?) -> Void ) {
         AF.request(Constants.serverUrl + "/user/loginWithSocialApp",
                    method: .post,
-                   parameters: ["email": email, "name": name],
+                   parameters: ["email": email, "name": name, "role": role],
                    encoding: JSONEncoding.default)
             .validate(statusCode: 200..<300)
             .validate(contentType: ["application/json"])
@@ -97,6 +142,7 @@ class UserViewModel {
                     
                     print("this is the new token value : " + jsonData["token"].stringValue)
                     UserDefaults.standard.setValue(jsonData["token"].stringValue, forKey: "userToken")
+                    UserDefaults.standard.setValue(user._id, forKey: "userId")
                     completed(true, user)
                 case let .failure(error):
                     debugPrint(error)
@@ -184,12 +230,37 @@ class UserViewModel {
             }
     }
     
+    func setLocation(email: String, latitude: Double, longitude: Double, clear: Bool, completed: @escaping (Bool) -> Void ) {
+        
+        AF.request(Constants.serverUrl + "/user/setLocation",
+                   method: .put,
+                   parameters: [
+                    "email": email,
+                    "latitude": latitude,
+                    "longitude" : longitude,
+                    "clear" : clear
+                   ],
+                   encoding: JSONEncoding.default)
+            .response { response in
+                switch response.result {
+                case .success:
+                    print("Success")
+                    completed(true)
+                case let .failure(error):
+                    print(error)
+                    completed(false)
+                }
+            }
+    }
+    
     func makeUser(jsonItem: JSON) -> User {
         User(
             _id: jsonItem["_id"].stringValue,
             name: jsonItem["name"].stringValue,
             email: jsonItem["email"].stringValue,
             address: jsonItem["address"].stringValue,
+            latitude: jsonItem["latitude"].stringValue,
+            longitude: jsonItem["longitude"].stringValue,
             password: jsonItem["password"].stringValue,
             phone: jsonItem["phone"].stringValue,
             role: jsonItem["role"].stringValue,
