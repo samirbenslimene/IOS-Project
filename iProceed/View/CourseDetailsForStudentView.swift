@@ -7,13 +7,12 @@
 
 import UIKit
 
-class CourseDetailsView: UIViewController {
+class CourseDetailsForStudentView: UIViewController {
     
     // variables
     var course: Course?
     
     // iboutlets
-    @IBOutlet weak var deleteButton: UIBarButtonItem!
     @IBOutlet weak var descriptionTextView: UITextView!
     @IBOutlet weak var courseImage: UIImageView!
     
@@ -28,10 +27,6 @@ class CourseDetailsView: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        if course?.user?._id != UserDefaults.standard.string(forKey: "userId") {
-            deleteButton.accessibilityElementsHidden = true
-        }
-        
         self.title = course?.title
         descriptionTextView.text = course?.description
         
@@ -44,9 +39,7 @@ class CourseDetailsView: UIViewController {
         self.present(Alert.makeActionAlert(titre: "Alert", message: "Are you sure you want to delete this course", action: UIAlertAction(title: "Yes", style: .destructive, handler: { [self] UIAlertAction in
             CourseViewModel().deleteCourse(_id: (course?._id)!) { success in
                 if success {
-                    
-                    self.navigationController?.popToRootViewController(animated: true)
-                    
+                    self.present(Alert.makeAlert(titre: "Success", message: "Course deleted"),animated: true)
                 }
             }
         })),animated: true)

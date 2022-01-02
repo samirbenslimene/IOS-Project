@@ -9,4 +9,5 @@ import Foundation
 
 struct Constants {
      static let serverUrl = "http://localhost:3000/api"
+    static let imagesUrl = "http://localhost:3000/img/"
  }

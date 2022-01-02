@@ -38,7 +38,7 @@ class VerifAccountView: UIViewController {
         let token = UserDefaults.standard.string(forKey: "userToken")
         
         if token != nil {
-            UserViewModel().getUserFromToken(userToken: token!) { success, user in
+            UserViewModel().getUserFromToken() { success, user in
                 if success {
                     if (user!.role == "Student") {
                         self.performSegue(withIdentifier: "loginAsStudentSegue", sender: nil)

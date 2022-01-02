@@ -20,10 +20,7 @@ class CourseViewModel {
                 switch response.result {
                 case .success:
                     let jsonData = JSON(response.data!)
-                    debugPrint(jsonData)
-                    
                     var courses : [Course]? = []
-                    debugPrint(jsonData["course"])
                     for singleJsonItem in jsonData["course"] {
                         courses!.append(self.makeCourse(jsonItem: singleJsonItem.1))
                     }
@@ -55,55 +52,76 @@ class CourseViewModel {
             }
     }
     
-    func addCourse(title: String, description: String, date: Date, completed: @escaping (Bool) -> Void) {
-        AF.request(Constants.serverUrl + "/course",
-                   method: .post,
-                   parameters: [
-                    "title" : title,
-                    "description" : description,
-                    "date" : date,
-                   ])
+    func addCourse(title: String, description: String, date: Date, uiImage: UIImage, completed: @escaping (Bool) -> Void ) {
+        
+        AF.upload(multipartFormData: { multipartFormData in
+            multipartFormData.append(uiImage.jpegData(compressionQuality: 0.5)!, withName: "image" , fileName: "image.jpeg", mimeType: "image/jpeg")
+            
+            for (key, value) in
+                    [
+                        "title" : title,
+                        "description": description,
+                        "date" : DateUtils.formatFromDate(date: date),
+                        "user" : UserDefaults.standard.string(forKey: "userId")!
+                    ]
+            {
+                multipartFormData.append((value.data(using: .utf8))!, withName: key)
+            }
+            
+        },to: Constants.serverUrl + "/course",
+                  method: .post)
             .validate(statusCode: 200..<300)
             .validate(contentType: ["application/json"])
             .responseData { response in
                 switch response.result {
                 case .success:
+                    print("Success")
                     completed(true)
                 case let .failure(error):
-                    print(error)
                     completed(false)
+                    print(error)
                 }
             }
     }
     
-    func editCourse(_id: String, title: String, description: String, date: Date, completed: @escaping (Bool) -> Void) {
-        AF.request(Constants.serverUrl + "/course",
-                   method: .put,
-                   parameters: [
-                    "_id" : _id,
-                    "title" : title,
-                    "description" : description,
-                    "date" : date,
-                   ])
+    func editCourse(_id: String, title: String, description: String, date: Date, uiImage: UIImage, completed: @escaping (Bool) -> Void ) {
+        
+        AF.upload(multipartFormData: { multipartFormData in
+            multipartFormData.append(uiImage.jpegData(compressionQuality: 0.5)!, withName: "image" , fileName: "image.jpeg", mimeType: "image/jpeg")
+            
+            for (key, value) in
+                    [
+                        "_id" : _id,
+                        "title" : title,
+                        "description": description,
+                        //"date" : DateUtils.formatFromDate(date: date)
+                    ]
+            {
+                multipartFormData.append((value.data(using: .utf8))!, withName: key)
+            }
+            
+        },to: Constants.serverUrl + "/course",
+                  method: .put)
             .validate(statusCode: 200..<300)
             .validate(contentType: ["application/json"])
             .responseData { response in
                 switch response.result {
                 case .success:
+                    print("Success")
                     completed(true)
                 case let .failure(error):
-                    print(error)
                     completed(false)
+                    print(error)
                 }
             }
     }
     
     func deleteCourse(_id: String, completed: @escaping (Bool) -> Void) {
-        AF.request(Constants.serverUrl + "/course",
-                   method: .delete,
-                   parameters: ["_id" : _id])
+        AF.request(Constants.serverUrl + "/course/delete",
+                   method: .post,
+                   parameters: ["_id" : _id],
+                   encoding: JSONEncoding.default)
             .validate(statusCode: 200..<300)
-            .validate(contentType: ["application/json"])
             .responseData { response in
                 switch response.result {
                 case .success:
@@ -120,7 +138,26 @@ class CourseViewModel {
             _id: jsonItem["_id"].stringValue,
             title: jsonItem["title"].stringValue,
             description: jsonItem["description"].stringValue,
-            date: Date()
+            date: Date(),
+            user: makeUser(jsonItem: jsonItem["user"]),
+            idPhoto: jsonItem["idPhoto"].stringValue
+        )
+    }
+    
+    func makeUser(jsonItem: JSON) -> User {
+        User(
+            _id: jsonItem["_id"].stringValue,
+            name: jsonItem["name"].stringValue,
+            email: jsonItem["email"].stringValue,
+            address: jsonItem["address"].stringValue,
+            latitude: jsonItem["latitude"].stringValue,
+            longitude: jsonItem["longitude"].stringValue,
+            password: jsonItem["password"].stringValue,
+            phone: jsonItem["phone"].stringValue,
+            role: jsonItem["role"].stringValue,
+            isVerified: jsonItem["isVerified"].boolValue,
+            typeInstructeur: jsonItem["typeInstructeur"].stringValue,
+            prixParCour: jsonItem["prixParCour"].floatValue
         )
     }
 }

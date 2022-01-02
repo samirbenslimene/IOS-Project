@@ -38,6 +38,7 @@ class SignInView: UIViewController {
     @IBOutlet weak var facebookLoginProviderStackView: UIStackView! // Facebook login button
     @IBOutlet weak var appleLoginProviderStackView: UIStackView! // Apple login button
     @IBOutlet weak var twitterLoginProviderStackView: UIStackView! // Twitter login button
+    @IBOutlet weak var roleSwitch: UISwitch!
     
     // protocols
     
@@ -98,10 +99,14 @@ class SignInView: UIViewController {
     }
     
     func loginWithFacebook() {
-        
-        let imageData = NSData()
+        print("fb")
+        _ = NSData()
         
         GraphRequest(graphPath: "me", parameters: ["fields": "first_name,last_name,  picture.width(480).height(480),email, id"]).start { [self] (connection, result, error) in
+            
+            if (error != nil){
+                debugPrint(error!)
+            }
             
             if let fields = result as? [String:Any],
                let lastname = fields["last_name"] as? String,
@@ -116,7 +121,7 @@ class SignInView: UIViewController {
                     let pictureUrl = NSURL(string: pictureUrlString)
                     
                     let imageData = NSData(contentsOf: pictureUrl! as URL)
-                    let newImage = UIImage(data: imageData as! Data)
+                    _ = UIImage(data: imageData! as Data)
                     
                 }
                 
@@ -129,15 +134,13 @@ class SignInView: UIViewController {
                 print("Logging in with facebook..")
                 loginWithSocialMedia(email: email, name:  firstName + " " + lastname, socialMediaName: "Facebook")
                 
+                
                 print("--- End Facebook login infos ---")
             }
         }
     }
     
     @objc func googleSignIn() {
-        
-        startSpinner()
-        
         GIDSignIn.sharedInstance.signIn(with: googleSignInConfig, presenting: self) { [self] user, error in
             guard error == nil else { return }
             guard let user = user else { return }
@@ -168,7 +171,6 @@ class SignInView: UIViewController {
     }
     
     @objc func twitterSignIn() {
-        startSpinner()
         TWTRTwitter.sharedInstance().logIn(completion: { (session, error) in
             if (session != nil) {
                 
@@ -190,10 +192,20 @@ class SignInView: UIViewController {
             self.stopSpinner()
         })
     }
-    
+
     func loginWithSocialMedia(email: String?, name: String?, socialMediaName: String) {
-        startSpinner()
-        UserViewModel().loginWithSocialApp(email: email!, name: name!, completed: { success, user in
+        
+        var role = ""
+        //switch between roles before sign in
+        
+        if roleSwitch.isOn{
+            role = "Instructor"
+        }else{
+            role = "Student"
+        }
+        
+        
+        UserViewModel().loginWithSocialApp(email: email!, name: name!, role: role, completed: { success, user in
             if success {
                 self.proceedToLogin(user: user!)
             } else {
@@ -270,11 +282,11 @@ extension SignInView: ASAuthorizationControllerDelegate {
             let email = credentials.email
             
             print("--- Apple login infos ---")
-            print(firstName)
-            print(lastName)
-            print(email)
+            print(firstName!)
+            print(lastName!)
+            print(email!)
             print("--- End Apple login infos ---")
-            
+            loginWithSocialMedia(email: email, name: firstName, socialMediaName: "Apple")
             break
             
         default:

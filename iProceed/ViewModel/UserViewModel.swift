@@ -11,6 +11,45 @@ import UIKit.UIImage
 
 class UserViewModel {
     
+    func getAllInstructors(completed: @escaping (Bool, [User]?) -> Void) {
+        AF.request(Constants.serverUrl + "/user",
+                   method: .get)
+            .validate(statusCode: 200..<300)
+            .validate(contentType: ["application/json"])
+            .responseData { response in
+                switch response.result {
+                case .success:
+                    let jsonData = JSON(response.data!)
+                    var users : [User]? = []
+                    for singleJsonItem in jsonData["users"] {
+                        users!.append(self.makeUser(jsonItem: singleJsonItem.1))
+                    }
+                    completed(true, users)
+                case let .failure(error):
+                    print(error)
+                    completed(false, nil)
+                }
+            }
+    }
+    
+    func getUserById(_id: String?, completed: @escaping (Bool, User?) -> Void) {
+        AF.request(Constants.serverUrl + "/user/by-id",
+                   method: .post,
+                   parameters: ["_id" : _id!],
+                   encoding: JSONEncoding.default)
+            .validate(statusCode: 200..<300)
+            .validate(contentType: ["application/json"])
+            .responseData { response in
+                switch response.result {
+                case .success:
+                    completed(true,  self.makeUser(jsonItem: JSON(response.data!)["user"]))
+                case let .failure(error):
+                    debugPrint(error)
+                    completed(false, nil)
+                }
+            }
+    }
+    
     func signUp(user: User, completed: @escaping (Bool) -> Void ) {
         print(user)
         AF.request(Constants.serverUrl + "/user/signUp",
@@ -50,6 +89,7 @@ class UserViewModel {
                     let jsonData = JSON(response.data!)
                     let user = self.makeUser(jsonItem: jsonData["user"])
                     UserDefaults.standard.setValue(jsonData["token"].stringValue, forKey: "userToken")
+                    UserDefaults.standard.setValue(user._id, forKey: "userId")
                     completed(true, user)
                 case let .failure(error):
                     debugPrint(error)
@@ -58,34 +98,40 @@ class UserViewModel {
             }
     }
     
-    func getUserFromToken(userToken: String, completed: @escaping (Bool, User?) -> Void ) {
-        print("Looking for user --------------------")
-        AF.request(Constants.serverUrl + "/user/getUserFromToken",
-                   method: .post,
-                   parameters: ["userToken": userToken],
-                   encoding: JSONEncoding.default)
-            .validate(statusCode: 200..<300)
-            .validate(contentType: ["application/json"])
-            .response { response in
-                switch response.result {
-                case .success:
-                    let jsonData = JSON(response.data!)
-                    let user = self.makeUser(jsonItem: jsonData["user"])
+    func getUserFromToken(completed: @escaping (Bool, User?) -> Void ) {
+        
+        if UserDefaults.standard.string(forKey: "userToken") != nil {
+            print("Looking for user --------------------")
+            AF.request(Constants.serverUrl + "/user/getUserFromToken",
+                       method: .post,
+                       parameters: ["userToken": UserDefaults.standard.string(forKey: "userToken")!],
+                       encoding: JSONEncoding.default)
+                .validate(statusCode: 200..<300)
+                .validate(contentType: ["application/json"])
+                .response { response in
+                    switch response.result {
+                    case .success:
+                        let jsonData = JSON(response.data!)
+                        let user = self.makeUser(jsonItem: jsonData["user"])
                         print("Found user --------------------")
                         print(user)
                         print("-------------------------------")
-                    completed(true, user)
-                case let .failure(error):
-                    debugPrint(error)
-                    completed(false, nil)
+                        completed(true, user)
+                    case let .failure(error):
+                        debugPrint(error)
+                        completed(false, nil)
+                    }
                 }
-            }
+        } else {
+            completed(false, nil)
+        }
+        
     }
     
-    func loginWithSocialApp(email: String, name: String, completed: @escaping (Bool, User?) -> Void ) {
+    func loginWithSocialApp(email: String, name: String, role: String, completed: @escaping (Bool, User?) -> Void ) {
         AF.request(Constants.serverUrl + "/user/loginWithSocialApp",
                    method: .post,
-                   parameters: ["email": email, "name": name],
+                   parameters: ["email": email, "name": name, "role": role],
                    encoding: JSONEncoding.default)
             .validate(statusCode: 200..<300)
             .validate(contentType: ["application/json"])
@@ -97,6 +143,7 @@ class UserViewModel {
                     
                     print("this is the new token value : " + jsonData["token"].stringValue)
                     UserDefaults.standard.setValue(jsonData["token"].stringValue, forKey: "userToken")
+                    UserDefaults.standard.setValue(user._id, forKey: "userId")
                     completed(true, user)
                 case let .failure(error):
                     debugPrint(error)
@@ -169,9 +216,55 @@ class UserViewModel {
                     "name": user.name!,
                     "email": user.email!,
                     "address": user.address!,
-                    //"password": user.password!,
-                    "phone": user.phone!
+                    "phone": user.phone!,
+                    "typeInstructeur": user.typeInstructeur!,
+                    "prixParCour": user.prixParCour!
                    ])
+            .response { response in
+                switch response.result {
+                case .success:
+                    print("Success")
+                    completed(true)
+                case let .failure(error):
+                    print(error)
+                    completed(false)
+                }
+            }
+    }
+    
+    func editNotifications(user: User, completed: @escaping (Bool) -> Void ) {
+        print(user.coursNotifications!)
+        AF.request(Constants.serverUrl + "/user/edit-notifications",
+                   method: .put,
+                   parameters: [
+                    "email": user.email!,
+                    "neverNotified": user.neverNotified!,
+                    "coursNotifications": user.coursNotifications!
+                   ],
+                   encoding: JSONEncoding.default)
+            .response { response in
+                switch response.result {
+                case .success:
+                    print("Success")
+                    completed(true)
+                case let .failure(error):
+                    print(error)
+                    completed(false)
+                }
+            }
+    }
+    
+    func setLocation(email: String, latitude: Double, longitude: Double, clear: Bool, completed: @escaping (Bool) -> Void ) {
+        
+        AF.request(Constants.serverUrl + "/user/setLocation",
+                   method: .put,
+                   parameters: [
+                    "email": email,
+                    "latitude": latitude,
+                    "longitude" : longitude,
+                    "clear" : clear
+                   ],
+                   encoding: JSONEncoding.default)
             .response { response in
                 switch response.result {
                 case .success:
@@ -190,10 +283,24 @@ class UserViewModel {
             name: jsonItem["name"].stringValue,
             email: jsonItem["email"].stringValue,
             address: jsonItem["address"].stringValue,
+            latitude: jsonItem["latitude"].stringValue,
+            longitude: jsonItem["longitude"].stringValue,
             password: jsonItem["password"].stringValue,
             phone: jsonItem["phone"].stringValue,
             role: jsonItem["role"].stringValue,
-            isVerified: jsonItem["isVerified"].boolValue
+            isVerified: jsonItem["isVerified"].boolValue,
+            typeInstructeur: jsonItem["typeInstructeur"].stringValue,
+            prixParCour: jsonItem["prixParCour"].floatValue,
+            neverNotified: jsonItem["neverNotified"].boolValue,
+            coursNotifications: jsonArrayToArray(jsonArray: jsonItem["coursNotifications"].arrayValue)
         )
+    }
+    
+    func jsonArrayToArray(jsonArray: [JSON]) -> [String] {
+        var items : [String] = []
+        for jsonItem in jsonArray {
+            items.append(jsonItem.stringValue)
+        }
+        return items
     }
 }

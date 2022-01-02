@@ -6,16 +6,17 @@
 //
 
 import UIKit
+import SendBirdUIKit
 
 class CoursesView: UIViewController, UITableViewDataSource, UITableViewDelegate {
     
     // variables
     var courses = [Course]()
     var courseForDetails : Course?
+    var selectedType : String?
     
     // iboutlets
     @IBOutlet weak var coursesTableView: UITableView!
-    
     
     // protocols
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -47,30 +48,31 @@ class CoursesView: UIViewController, UITableViewDataSource, UITableViewDelegate 
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        loadCourses(tv: self.coursesTableView)
-        coursesTableView.reloadData()
-    }
-    
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        coursesTableView.reloadData()
     }
     
     override func viewDidAppear(_ animated: Bool) {
-        coursesTableView.reloadData()
+        title = selectedType
+        loadCourses(tv: self.coursesTableView)
     }
     
     // methods
     func loadCourses(tv: UITableView) {
-        CourseViewModel().getCourses { succes, reponse in
+        CourseViewModel().getCourses { [self] succes, reponse in
             if succes {
-                for course in reponse!{
-                    self.courses.append(course)
+                
+                courses = []
+                
+                if selectedType == "All" {
+                    courses = reponse!
+                } else {
+                    for course in reponse! {
+                        if selectedType == course.user?.typeInstructeur {
+                            courses.append(course)
+                        }
+                    }
                 }
-                /*DispatchQueue.main.async {
-                    self.coursesTableView.reloadWithAnimation()
-                }*/
+                
+                self.coursesTableView.reloadData()
             }
             else{
                 self.present(Alert.makeAlert(titre: "Error", message: "Could not load courses"), animated: true)
@@ -78,6 +80,36 @@ class CoursesView: UIViewController, UITableViewDataSource, UITableViewDelegate 
         }
     }
     
-    // actions
-    
+    @IBAction func chatAction(_ sender: Any) {
+        
+        // 1. Initialize Sendbird UIKit
+        SBUMain.initialize(applicationId: "9A063A9E-85CA-4214-B178-91D97859CC06") {
+            
+        } completionHandler: { error in
+            
+        }
+        
+        UserViewModel().getUserFromToken { [self] success, user in
+            
+            
+            // 2. Set the current user
+            SBUGlobals.CurrentUser = SBUUser(userId: (user?.name)!)
+
+            // 3. Connect to Sendbird
+            SBUMain.connect { (user, error) in
+                
+                // user object will be an instance of SBDUser
+                guard let _ = user else {
+                    print("ContentView: init: Sendbird connect: ERROR: \(String(describing: error)). Check applicationId")
+                    return
+                }
+            }
+            
+            let clvc = SBUChannelListViewController()
+            let navc = UINavigationController(rootViewController: clvc)
+            navc.title = "Sendbird SwiftUI Demo"
+            navc.modalPresentationStyle = .fullScreen
+            present(navc, animated: true)
+        }
+    }
 }
